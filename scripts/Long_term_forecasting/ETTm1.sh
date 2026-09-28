@@ -24,7 +24,7 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --dropout 0.3 \
-  --top_p 0.0 \
+  --top_p 0.5 \
   --patch_len 8 \
   --des 'Exp' \
   --learning_rate 0.0001 \
@@ -56,7 +56,7 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --dropout 0.5 \
-  --top_p 0.0 \
+  --top_p 0.5 \
   --patch_len 8 \
   --des 'Exp' \
   --learning_rate 0.0001 \
@@ -88,7 +88,7 @@ python -u run.py \
   --dec_in 7 \
   --c_out 7 \
   --dropout 0.7 \
-  --top_p 0.0 \
+  --top_p 0.5 \
   --patch_len 16 \
   --des 'Exp' \
   --learning_rate 0.0001 \

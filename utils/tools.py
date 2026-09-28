@@ -2,15 +2,11 @@ import os
 
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
 import pandas as pd
 import math
 
-plt.switch_backend('agg')
-
 
 def adjust_learning_rate(optimizer, epoch, args):
-    # lr = args.learning_rate * (0.2 ** (epoch // 2))
     if args.lradj == 'type1':
         lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
     elif args.lradj == 'type2':
@@ -41,21 +37,6 @@ class EarlyStopping:
 
     def __call__(self, val_loss, model, path):
         self.save_checkpoint(val_loss, model, path)
-        '''
-        score = -val_loss
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
-                self.early_stop = True
-        else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, path)
-            self.counter = 0
-        '''
 
     def save_checkpoint(self, val_loss, model, path):
         if self.verbose:
@@ -65,7 +46,6 @@ class EarlyStopping:
 
 
 class dotdict(dict):
-    """dot.notation access to dictionary attributes"""
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -84,9 +64,9 @@ class StandardScaler():
 
 
 def visual(true, preds=None, name='./pic/test.pdf'):
-    """
-    Results visualization
-    """
+    import matplotlib.pyplot as plt
+
+    plt.switch_backend('agg')
     plt.figure()
     plt.plot(true, label='GroundTruth', linewidth=2)
     if preds is not None:
@@ -121,4 +101,3 @@ def adjustment(gt, pred):
 
 def cal_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
-

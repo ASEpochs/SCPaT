@@ -2,7 +2,6 @@ import argparse
 import os
 import torch
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
-from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 from utils.print_args import print_args
 import random
 import numpy as np
@@ -13,17 +12,15 @@ if __name__ == '__main__':
     torch.manual_seed(fix_seed)
     np.random.seed(fix_seed)
 
-    parser = argparse.ArgumentParser(description='PatchTST')
+    parser = argparse.ArgumentParser(description='SCPaT')
 
-    # basic config
     parser.add_argument('--task_name', type=str, required=True, default='long_term_forecast',
                         help='task name, options:[long_term_forecast, short_term_forecast, imputation, classification, anomaly_detection]')
     parser.add_argument('--is_training', type=int, required=True, default=1, help='status')
     parser.add_argument('--model_id', type=str, required=True, default='test', help='model id')
-    parser.add_argument('--model', type=str, required=True, default='PatchTST',
-                        help='model name, options: [Autoformer, Transformer, TimesNet]')
+    parser.add_argument('--model', type=str, required=True, default='SCPaT',
+                        help='model name, options: [SCPaT]')
 
-    # data loader
     parser.add_argument('--data', type=str, required=True, default='ETTh1', help='dataset type')
     parser.add_argument('--root_path', type=str, default='./data/', help='root path of the data file')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')
@@ -34,20 +31,16 @@ if __name__ == '__main__':
                         help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
     parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
-    # forecasting task
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')
     parser.add_argument('--label_len', type=int, default=48, help='start token length')
     parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length')
     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
     parser.add_argument('--inverse', action='store_true', help='inverse output data', default=False)
 
-    # inputation task
     parser.add_argument('--mask_rate', type=float, default=0.25, help='mask ratio')
 
-    # anomaly detection task
-    parser.add_argument('--anomaly_ratio', type=float, default=0.25, help='prior anomaly ratio (%)')
+    parser.add_argument('--anomaly_ratio', type=float, default=0.25, help='prior anomaly ratio in percent')
 
-    # model define
     parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
     parser.add_argument('--num_kernels', type=int, default=6, help='for Inception')
     parser.add_argument('--enc_in', type=int, default=7, help='encoder input size')
@@ -79,12 +72,10 @@ if __name__ == '__main__':
     parser.add_argument('--down_sampling_method', type=str, default='avg',
                         help='down sampling method, only support avg, max, conv')
     
-    # SCPaT model define
     parser.add_argument('--patch_len', type=int, default=16, help='length of patch')
-    parser.add_argument('--alpha', type=float, default=0.1, help='KNN for Graph Construction')
-    parser.add_argument('--top_p', type=float, default=0.5, help='Dynamic Routing in MoE')
+    parser.add_argument('--alpha', type=float, default=0.1, help='outgoing graph edge retention ratio')
+    parser.add_argument('--top_p', type=float, default=0.5, help='cumulative probability threshold for expert routing')
 
-    # optimization
     parser.add_argument('--num_workers', type=int, default=1, help='data loader num workers')
     parser.add_argument('--itr', type=int, default=1, help='experiments times')
     parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
@@ -96,22 +87,18 @@ if __name__ == '__main__':
     parser.add_argument('--lradj', type=str, default='cosine', help='adjust learning rate')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
-    # GPU
     parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
     parser.add_argument('--gpu', type=int, default=0, help='gpu')
     parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
     parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids of multile gpus')
 
-    # de-stationary projector params
     parser.add_argument('--p_hidden_dims', type=int, nargs='+', default=[128, 128],
                         help='hidden layer dimensions of projector (List)')
     parser.add_argument('--p_hidden_layers', type=int, default=2, help='number of hidden layers in projector')
 
-     # metrics (dtw)
     parser.add_argument('--use_dtw', type=bool, default=False, 
                         help='the controller of using dtw metric (dtw is time consuming, not suggested unless necessary)')
     
-    # Augmentation
     parser.add_argument('--augmentation_ratio', type=int, default=0, help="How many times to augment")
     parser.add_argument('--seed', type=int, default=2, help="Randomization seed")
     parser.add_argument('--jitter', default=False, action="store_true", help="Jitter preset augmentation")
@@ -146,14 +133,14 @@ if __name__ == '__main__':
     if args.task_name == 'long_term_forecast':
         Exp = Exp_Long_Term_Forecast
     elif args.task_name == 'short_term_forecast':
+        from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
         Exp = Exp_Short_Term_Forecast
     else:
         Exp = Exp_Long_Term_Forecast
 
     if args.is_training:
         for ii in range(args.itr):
-            # setting record of experiments
-            exp = Exp(args)  # set experiments
+            exp = Exp(args)
             setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
                 args.task_name,
                 args.model_id,
@@ -200,7 +187,7 @@ if __name__ == '__main__':
             args.distil,
             args.des, ii)
 
-        exp = Exp(args)  # set experiments
+        exp = Exp(args)
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
         exp.test(setting, test=1)
         torch.cuda.empty_cache()

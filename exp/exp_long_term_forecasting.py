@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 class Exp_Long_Term_Forecast(Exp_Basic):
     def __init__(self, args):
         super(Exp_Long_Term_Forecast, self).__init__(args)
-        self.masks = self._get_mask()
+        self.masks = None
 
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
@@ -37,37 +37,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         criterion = nn.MSELoss()
         return criterion
     
-    def _get_mask(self):
-        dtype = torch.float32
-        L = self.args.seq_len * self.args.c_out // self.args.patch_len
-        N = self.args.seq_len // self.args.patch_len
-        masks = []
-        for k in range(L):
-            S = ((torch.arange(L) % N == k % N) & (torch.arange(L) != k)).to(dtype).to(self.device)
-            T = ((torch.arange(L) >= k // N * N) & (torch.arange(L) < k // N * N + N) & (torch.arange(L) != k)).to(dtype).to(self.device)
-            ST = torch.ones(L).to(dtype).to(self.device) - S - T
-            ST[k] = 0.0
-            masks.append(torch.stack([S, T, ST], dim=0))
-        masks = torch.stack(masks, dim=0)
-        return masks
-    
-    def _get_mask_2(self):
-        dtype = torch.float32
-        dtype = torch.float32
-        L = self.args.seq_len * self.args.c_out // self.args.patch_len
-        N = self.args.seq_len // self.args.patch_len
-
-        mask_base = torch.eye(L, device=self.device, dtype=dtype).unsqueeze(0).unsqueeze(0)
-        mask0 = torch.eye(L, device=self.device, dtype=dtype)
-        mask0.view(self.args.c_out, N, self.args.c_out, N).diagonal(dim1=0, dim2=2).fill_(1)
-        mask0 = mask0.unsqueeze(0).unsqueeze(0) - mask_base
-        mask1 = torch.kron(torch.ones(self.args.c_out, self.args.c_out, device=self.device, dtype=dtype), 
-                            torch.eye(N, device=self.device, dtype=dtype))
-        mask1 = mask1.unsqueeze(0).unsqueeze(0) - mask_base
-        mask2 = torch.ones((1, 1, L, L), device=self.device, dtype=dtype) - mask1 - mask0 - mask_base
-        masks = torch.cat([mask0, mask1, mask2], dim=0)  # [3, 1, L, L]
-        return masks
-
     def vali(self, vali_data, vali_loader, criterion):
         total_loss = []
         self.model.eval()
@@ -76,7 +45,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float()
 
-                # encoder - decoder
                 outputs, _ = self.model(batch_x, self.masks, is_training=False)
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, -self.args.pred_len:, f_dim:]
@@ -124,14 +92,13 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
 
-                # encoder - decoder
-                outputs, moe_loss = self.model(batch_x, self.masks, is_training=True)
+                outputs, routing_loss = self.model(batch_x, self.masks, is_training=True)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
                 outputs = outputs[:, -self.args.pred_len:, f_dim:]
                 batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                 alpha = 0.05
-                loss = criterion(outputs, batch_y) + alpha * moe_loss
+                loss = criterion(outputs, batch_y) + alpha * routing_loss
                 train_loss.append(loss.item())
 
                 if (i + 1) % 100 == 0:
@@ -185,7 +152,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
 
-                # encoder - decoder
                 outputs, _ = self.model(batch_x, self.masks, is_training=False)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
@@ -218,7 +184,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         
-        # result save
         folder_path = './results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
@@ -231,10 +196,5 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.write('\n')
         f.write('\n')
         f.close()
-
-        # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-        # np.save(folder_path + 'input.npy', inputs)
-        # np.save(folder_path + 'pred.npy', preds)
-        # np.save(folder_path + 'true.npy', trues)
 
         return
