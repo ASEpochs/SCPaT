@@ -1,20 +1,8 @@
 # Rethinking Patch-Based Multivariate Time Series Forecasting with Semantic Structured Partitioning
 
-Official PyTorch implementation of **SCPaT**, a semantic-structured framework for multivariate time series forecasting (MTSF).
-
 ## Overview
 
-Most patch-based forecasting methods divide a sequence using fixed, multi-scale, or length-adaptive rules. Although these strategies improve computational efficiency or partitioning flexibility, they do not explicitly preserve the semantic coherence of local temporal patterns or model higher-order interactions among heterogeneous dynamics.
-
-SCPaT revisits temporal partitioning from a semantic-structure perspective. It represents local temporal patterns as semantic units, builds a sparse directed dependency graph among those units, and uses importance-aware routing to emphasize the relationships that are most useful for forecasting.
-
-The implementation follows the three components introduced in the paper:
-
-1. **Semantic Vector Encoder.** Multi-scale dilated temporal convolutions extract local patterns under different receptive fields. Adaptive fusion combines the scale-specific features, and variation-aware pooling converts local segments into semantic units.
-2. **Transfer Entropy Graph Constructor.** A differentiable transition score estimates the directed contribution of each source unit to a target unit conditioned on the target history. The strongest outgoing dependencies are retained to form a sparse semantic graph.
-3. **Importance-Aware Routing.** Graph aggregation produces higher-order semantic context. A noisy Top-P router then assigns each semantic representation to a data-dependent subset of three independently parameterized Transformer experts.
-
-The routing objective combines load balancing, expert importance balancing, and an entropy regularizer. The forecasting loss and routing loss are optimized jointly.
+SCPaT is a semantic structured framework for multivariate time series forecasting. Unlike conventional patch-based methods that partition sequences according to fixed positions or predefined scales, SCPaT adaptively constructs semantically coherent temporal units and explicitly models their higher-order dependencies. It consists of a Semantic Vector Encoder for adaptive semantic unit generation, a Transfer Entropy Graph Constructor for directed dependency modeling, and an Importance-Aware Router for adaptive expert selection. Together, these components provide a unified way to model heterogeneous temporal patterns and their structural interactions.
 
 ![SCPaT architecture](./assets/model.png)
 
